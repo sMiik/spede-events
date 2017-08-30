@@ -3,6 +3,10 @@
     {
         "username" : "NIMENHUUTO_USERNAME",
         "password" : "NIMENHUUTO_PASSWORD"
+    },
+    "team" :
+    {
+        "abbreviation": "NIMENHUUTO_TEAM_SUBDOMAIN"
     }
 }
 

@@ -3,6 +3,12 @@ const config=require('config'),
       jsdom=require('jsdom'),
       q=require('q');
 
+// Constants from configurations
+const username=config.get('credentials.username'),
+      password=config.get('credentials.password'),
+      abbr=config.get('team.abbreviation'),
+      domain='https://'+abbr+'.nimenhuuto.com/';
+
 // Globally used variables
 var reqHeaders={};
 var playersCache=[];
@@ -45,7 +51,7 @@ function fetch_headers(headers) {
 function init_player_cache() {
     console.log('Initializing players to cache');
     let defer=q.defer();
-    request.get({url: 'https://fcspede.nimenhuuto.com/players', headers: reqHeaders}, function(error, response, body) {
+    request.get({url: domain+'players', headers: reqHeaders}, function(error, response, body) {
         if (response.statusCode !== 200) {
             console.error('Error fetching player data ('+response.statusCode+')');
             console.error(error);
@@ -66,7 +72,7 @@ function init_player_cache() {
 // Open session for handling the stuff
 function open_session(username, password, callback) {
     console.log('Opening session for handling everything');
-    request.get('https://fcspede.nimenhuuto.com/sessions/new', function(error, response, body) {
+    request.get(domain+'sessions/new', function(error, response, body) {
         if (response.statusCode !== 200) {
             console.error('Error fetching login form ('+response.statusCode+')');
             console.error(error);
@@ -83,7 +89,7 @@ function open_session(username, password, callback) {
             password: password,
             commit: 'Kirjaudu',
         };
-        request({url: 'https://fcspede.nimenhuuto.com/sessions', method: 'POST', headers: reqHeaders, form: loginForm, callback: callback});
+        request({url: domain+'sessions', method: 'POST', headers: reqHeaders, form: loginForm, callback: callback});
     });
 }
 
@@ -126,7 +132,7 @@ function parse_player(player) {
 
 function fetch_events() {
     console.log('Getting all the events (from first page)');
-    request({url: 'https://fcspede.nimenhuuto.com/events', headers: reqHeaders}, function(error, response, body) {
+    request({url: domain+'events', headers: reqHeaders}, function(error, response, body) {
         if (response.statusCode !== 200) {
             console.error('Error fetching events ('+response.statusCode+')');
             console.error(error);
@@ -301,7 +307,5 @@ let session_callback=function(error, response, body) {
 };
 
 // Aka. init
-let username=config.get('credentials.username');
-let password=config.get('credentials.password');
 open_session(username, password, session_callback);
 
