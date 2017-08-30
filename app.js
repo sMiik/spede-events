@@ -3,7 +3,7 @@ const config=require('config'),
       jsdom=require('jsdom'),
       q=require('q');
 
-// Globally used request headers
+// Globally used variables
 var reqHeaders={};
 var playersCache=[];
 
