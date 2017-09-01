@@ -171,7 +171,6 @@ function get_player_name(player) {
     return playerName;
 }
 
-// Not working, so not in use yet
 function get_player_info(player_id) {
     if (playersCache.length === 0) {
         console.error('No player cache found');
