@@ -1,8 +1,9 @@
 const config=require('config'),
-      request=require('request'),
       jsdom=require('jsdom'),
       q=require('q'),
-      dateformat=require('dateformat'),
+      dateformat=require('dateformat');
+
+const Session=require('./classes/session.class.js'),
       Players=require('./classes/players.class.js'),
       Event=require('./classes/event.class.js');
 
@@ -13,86 +14,12 @@ const username=config.get('credentials.username'),
       domain='https://'+abbr+'.nimenhuuto.com/';
 
 // Globally used variables
-var reqHeaders={};
 var playersCache=new Players();
-
-// Initial stuff to keep things rocking
-function fetch_headers(headers) {
-    console.log('Fetching headers for further requests');
-    const accepted_headers=[
-        'accept',
-        'accept-encoding',
-        'accept-language',
-        'connection',
-        'host',
-        'referer',
-        'set-cookie',
-        'upgrade-insecure-requests',
-        'user-agent'
-    ];
-    let request_headers={}
-    for (let i in headers) {
-        if (accepted_headers.indexOf(i.toLowerCase()) === -1) {
-            continue;
-        }
-        if (i.toLowerCase() === 'set-cookie') {
-            request_headers['Cookie']=headers[i];
-        } else if (i.toLowerCase() === 'connection') {
-            request_headers[i]='keep-alive';
-        } else {
-            request_headers[i]=headers[i];
-        }
-    }
-    // Flatten and regenerate request headers (shouldn't be done but once)
-    reqHeaders={};
-    for (let i in request_headers) {
-        reqHeaders[i]= Array.isArray(request_headers[i]) ? request_headers[i].join('; ') : request_headers[i];
-    }
-}
-
-// Get players to cache to only have to fetch once
-function init_player_cache() {
-    console.log('Initializing players to cache');
-    let defer=q.defer();
-    request.get({url: domain+'players', headers: reqHeaders}, function(error, response, body) {
-        if (response.statusCode !== 200) {
-            console.error('Error fetching player data ('+response.statusCode+')');
-            console.error(error);
-            defer.reject('Error fetching player data ('+response.statusCode+')\n'+error);
-        }
-        let players=new Players(body);
-        defer.resolve(players);
-    });
-    return defer.promise;
-}
-
-// Open session for handling the stuff
-function open_session(username, password, callback) {
-    console.log('Opening session for handling everything');
-    request.get(domain+'sessions/new', function(error, response, body) {
-        if (response.statusCode !== 200) {
-            console.error('Error fetching login form ('+response.statusCode+')');
-            console.error(error);
-            return;
-        }
-        fetch_headers(response.headers);
-        let loginDom=new jsdom.JSDOM(body).window.document;
-        let authToken=loginDom.querySelector("input[type='hidden'][name='authenticity_token']").value;
-        // Login
-        let loginForm={
-            authenticity_token: authToken,
-            login_redirect_url: '',
-            login_name: username,
-            password: password,
-            commit: 'Kirjaudu',
-        };
-        request({url: domain+'sessions', method: 'POST', headers: reqHeaders, form: loginForm, callback: callback});
-    });
-}
+var session=new Session();
 
 function fetch_events() {
     console.log('Getting all the events (from first page)');
-    request({url: domain+'events', headers: reqHeaders}, function(error, response, body) {
+    session.do_request(domain+'events', 'GET', null, function(error, response, body) {
         if (response.statusCode !== 200) {
             console.error('Error fetching events ('+response.statusCode+')');
             console.error(error);
@@ -150,7 +77,7 @@ function get_player_info_string(playerDom) {
 function get_event_info(eventDom) {
     let link=eventDom.querySelector('.event-title-link').href;
     let defer=q.defer();
-    request({url: link, headers: reqHeaders}, function(error, response, body) {
+    session.do_request(link, 'GET', null, function(error, response, body) {
         if (response.statusCode !== 200) {
             defer.reject('Error parsing events ('+response.statusCode+')\n'
                     +error);
@@ -216,6 +143,7 @@ function get_event_info(eventDom) {
 
 // The whole thing's run by initializing session and starting the handle
 let session_callback=function(error, response, body) {
+    console.log('calling back');
     if (response.statusCode !== 200 && 
             response.statusCode !== 302 &&
             response.statusCode !== 301) {
@@ -223,7 +151,7 @@ let session_callback=function(error, response, body) {
         console.error(error);
         return;
     }
-    init_player_cache().then(function(success) {
+    Players.initPlayers(domain+'players', session.headers).then(function(success) {
         if (success.length === 0) {
             console.error('Error fetching players');
             return;
@@ -231,10 +159,11 @@ let session_callback=function(error, response, body) {
         playersCache=success;
         fetch_events();
     }, function(error) {
+        console.error('Error initializing players cache');
         console.error(error);
     });
 };
 
 // Aka. init
-open_session(username, password, session_callback);
+session.login(domain, username, password, session_callback);
 
