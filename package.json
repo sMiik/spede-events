@@ -2,15 +2,16 @@
   "name": "spede-events",
   "version": "1.0.0",
   "description": "",
-  "main": "app.js",
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node app.js"
+    "start": "node index.js"
   },
   "author": "FC Spede ry",
   "license": "ISC",
   "dependencies": {
     "config": "^1.26.2",
+    "dateformat": "^2.0.0",
     "jsdom": "^11.2.0",
     "q": "^1.5.0",
     "request": "^2.81.0"
