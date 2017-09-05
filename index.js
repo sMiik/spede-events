@@ -1,17 +1,16 @@
 const config=require('config'),
       jsdom=require('jsdom'),
       q=require('q'),
-      dateformat=require('dateformat');
-
-const Session=require('./classes/session.class.js'),
+      // custom classes
+      Session=require('./classes/session.class.js'),
       Players=require('./classes/players.class.js'),
       Event=require('./classes/event.class.js');
 
 // Constants from configurations
 const username=config.get('credentials.username'),
       password=config.get('credentials.password'),
-      abbr=config.get('team.abbreviation'),
-      domain='https://'+abbr+'.nimenhuuto.com/';
+      sub=config.get('team.abbreviation'),
+      domain='https://'+sub+'.nimenhuuto.com/';
 
 // Globally used variables
 var session=new Session(domain);
