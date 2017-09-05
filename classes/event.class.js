@@ -1,8 +1,6 @@
 'use strict';
 
-const request=require('request'),
-      q=require('q'),
-      dateformat=require('dateformat'),
+const dateformat=require('dateformat'),
       // custom classes
       Nimenhuuto=require('./nimenhuuto.class.js');
 
@@ -57,22 +55,18 @@ class Event extends Nimenhuuto {
                 +'---------------------------------------------------';
     }
 
-    static request_event(event_link, headers) {
-        let defer=q.defer();
-        console.og(event_link);
-        request({url: event_link, headers: headers, method: 'GET', callback: function(error, response, body) {
-            if (response.statusCode !== 200) {
-                defer.reject('Error fetching event '+event_link+' ('+response.statusCode+')\n'
-                        +error);
-                return defer.promise;
-            }
-            let nhEvent=new Event(body);
-            if (nhEvent.link === null) {
-                nhEvent.link = event_link;
-            }
-            defer.resolve(nhEvent);
-        }});
-        return defer.promise; 
+    get_object() {
+        return {
+            id: this.id,
+            link: this.link,
+            name: this.name,
+            date: dateformat(this.date, 'yyyy-mm-dd')+'T'+dateformat(this.date, 'HH:MM'),
+            type: this.type,
+            inPlayers: [].slice.call(this.inPlayers).map(playerDom => playerDom.id),
+            outPlayers: [].slice.call(this.outPlayers).map(playerDom => playerDom.id),
+            nonAnsweredPlayers: [].slice.call(this.nonAnsweredPlayers).map(playerDom => playerDom.id),
+            request_date: this.request_date
+        };
     }
 
 };

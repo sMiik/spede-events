@@ -2,6 +2,7 @@
 
 const request=require('request'),
       q=require('q'),
+      dateformat=require('dateformat'),
       // custom classes
       Nimenhuuto=require('./nimenhuuto.class.js'),
       Players=require('./players.class.js'),
@@ -153,6 +154,8 @@ class Session {
                         +error);
             } else {
                 let nhEvent=new Event(body);
+                let now=new Date();
+                nhEvent.request_date=dateformat(now, 'yyyy-mm-dd')+'T'+dateformat(now, 'HH:MM:ss');
                 defer.resolve(nhEvent);
             }
         });
