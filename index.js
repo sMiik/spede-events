@@ -1,8 +1,4 @@
 const config=require('config'),
-      jsdom=require('jsdom'),
-      q=require('q'),
-      express=require('express'),
-      dateformat=require('dateformat'),
       // custom classes
       Session=require('./classes/session.class.js'),
       Players=require('./classes/players.class.js'),
