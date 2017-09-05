@@ -7,6 +7,19 @@
     "team" :
     {
         "abbreviation": "NIMENHUUTO_TEAM_SUBDOMAIN"
-    }
+    },
+    "api":
+    {   
+        "domain": "DOMAIN_TO_SERVE_API_FROM",
+        "port": INTEGER_PORT_FOR_API,
+        "request_path": "REQUEST_PATH_IF_EXISTS_AFTER_DOMAIN",
+        "update_intervals": 
+        {
+            "events": EVENTS_UPDATE_INTERVAL_IN_MS,
+            "event": SINGLE_EVENT_UPDATE_INTERVAL_IN_MS,
+            "players": PLAYERS_CACHE_UPDATE_INTERVAL_IN_MS
+        }
+    }   
+
 }
 

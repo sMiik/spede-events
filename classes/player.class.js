@@ -57,6 +57,17 @@ class Player extends Nimenhuuto {
         return player_info_array.join(' ');
     }
 
+    get_object() {
+        return {
+            id: this.id,
+            name: this.name,
+            jersey: this.jersey,
+            nickname: this.nickname,
+            email: this.email,
+            phone: this.phone
+        };
+    }
+
 };
 
 module.exports=Player;

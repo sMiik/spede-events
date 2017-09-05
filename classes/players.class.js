@@ -43,6 +43,12 @@ class Players extends Nimenhuuto {
     getPlayer(player_id) {
         let player=this.players.filter(player => player.id === player_id);
         if (player.length === 0) {
+            player=this.players.filter(player => player.jersey.replace('#','') === player_id);
+        }
+        if (player.length === 0) {
+            player=this.players.filter(player => player.email === player_id);
+        }
+        if (player.length === 0) {
             console.error('Player with id '+player_id+' not found!');
             return null;
         }

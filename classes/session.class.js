@@ -2,6 +2,7 @@
 
 const request=require('request'),
       q=require('q'),
+      dateformat=require('dateformat'),
       // custom classes
       Nimenhuuto=require('./nimenhuuto.class.js'),
       Players=require('./players.class.js'),
@@ -67,6 +68,13 @@ class Session {
     }
 
     login(username, password, callback) {
+        this.username=username;
+        this.password=password;
+        this.callback=callback;
+        this.relogin();
+    }
+
+    relogin() {
         let ref=this;
         return this.get_request(this.domain+'sessions/new', function(error, response, body) {
             if (response.statusCode !== 200) {
@@ -80,12 +88,12 @@ class Session {
             let loginForm={
                 authenticity_token: authToken,
                 login_redirect_url: '', 
-                login_name: username,
-                password: password,
+                login_name: ref.username,
+                password: ref.password,
                 commit: 'Kirjaudu',
             };
             // Login
-            ref.post_request(ref.domain+'sessions', loginForm, callback);
+            ref.post_request(ref.domain+'sessions', loginForm, ref.callback);
         });
     }
 
@@ -99,7 +107,9 @@ class Session {
                 console.error(error);
                 defer.reject('Error fetching player data ('+response.statusCode+')\n'+error);
             }
+            let now=new Date();
             ref.players=new Players(body);
+            ref.players.request_date=dateformat(now, 'yyyy-mm-dd')+'T'+dateformat(now, 'HH:MM:ss');
             ref.players.parsePlayers();
             defer.resolve(ref.players);
         });
@@ -153,6 +163,8 @@ class Session {
                         +error);
             } else {
                 let nhEvent=new Event(body);
+                let now=new Date();
+                nhEvent.request_date=dateformat(now, 'yyyy-mm-dd')+'T'+dateformat(now, 'HH:MM:ss');
                 defer.resolve(nhEvent);
             }
         });

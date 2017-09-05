@@ -1,16 +1,20 @@
 const config=require('config'),
       jsdom=require('jsdom'),
       q=require('q'),
+      express=require('express'),
+      dateformat=require('dateformat'),
       // custom classes
       Session=require('./classes/session.class.js'),
       Players=require('./classes/players.class.js'),
-      Event=require('./classes/event.class.js');
+      Event=require('./classes/event.class.js'),
+      Api=require('./classes/api.class.js');
 
 // Constants from configurations
 const username=config.get('credentials.username'),
       password=config.get('credentials.password'),
       sub=config.get('team.abbreviation'),
-      domain='https://'+sub+'.nimenhuuto.com/';
+      domain='https://'+sub+'.nimenhuuto.com/',
+      api_config=config.get('api');
 
 // Globally used variables
 var session=new Session(domain);
@@ -73,4 +77,6 @@ let session_callback=function(error, response, body) {
 
 // Aka. init
 session.login(username, password, session_callback);
+
+const api=new Api(session, api_config);
 
