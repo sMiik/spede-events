@@ -1,9 +1,9 @@
 'use strict';
 
 const request=require('request'),
-      q=require('q');
-
-const Nimenhuuto=require('./nimenhuuto.class.js'),
+      q=require('q'),
+      // custom classes
+      Nimenhuuto=require('./nimenhuuto.class.js'),
       Player=require('./player.class.js');
 
 class Players extends Nimenhuuto {

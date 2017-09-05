@@ -1,5 +1,10 @@
 'use strict';
-const Nimenhuuto=require('./nimenhuuto.class.js');
+
+const request=require('request'),
+      q=require('q'),
+      dateformat=require('dateformat'),
+      // custom classes
+      Nimenhuuto=require('./nimenhuuto.class.js');
 
 class Event extends Nimenhuuto {
 
@@ -43,6 +48,31 @@ class Event extends Nimenhuuto {
                 joinStatusInt=3;
         }
         return this.domObject.querySelectorAll('#zone_'+joinStatusInt+' .player_type_1');
+    }
+
+    get_event_info() {
+        let thisDateString=dateformat(this.date, 'dd.mm.yyyy @ HH:MM');
+        return '---------------------------------------------------\n'
+                +thisDateString+': '+this.name+' ('+this.link+')\n'
+                +'---------------------------------------------------';
+    }
+
+    static request_event(event_link, headers) {
+        let defer=q.defer();
+        console.og(event_link);
+        request({url: event_link, headers: headers, method: 'GET', callback: function(error, response, body) {
+            if (response.statusCode !== 200) {
+                defer.reject('Error fetching event '+event_link+' ('+response.statusCode+')\n'
+                        +error);
+                return defer.promise;
+            }
+            let nhEvent=new Event(body);
+            if (nhEvent.link === null) {
+                nhEvent.link = event_link;
+            }
+            defer.resolve(nhEvent);
+        }});
+        return defer.promise; 
     }
 
 };

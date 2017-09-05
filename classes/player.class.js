@@ -3,6 +3,7 @@
 const Nimenhuuto=require('./nimenhuuto.class.js');
 
 class Player extends Nimenhuuto {
+
     constructor(domObject){
         super(domObject);
 
@@ -44,6 +45,18 @@ class Player extends Nimenhuuto {
         }   
         this.phone=player_phone;
     }
+
+    get_player_info_string() {
+        let player_info_array=[];
+        if (this.jersey !== '?') {
+            player_info_array.push(this.jersey);
+        }
+        if (this.name !== null && this.name !== '') {
+            player_info_array.push(this.name);
+        }
+        return player_info_array.join(' ');
+    }
+
 };
 
 module.exports=Player;
