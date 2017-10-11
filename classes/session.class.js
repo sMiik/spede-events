@@ -3,6 +3,7 @@
 const request=require('request'),
       q=require('q'),
       dateformat=require('dateformat'),
+      delay=require('delay'),
       // custom classes
       Nimenhuuto=require('./nimenhuuto.class.js'),
       Players=require('./players.class.js'),
@@ -29,6 +30,9 @@ class Session {
         this.headers={};
         this.players=null;
         this.events=[];
+        this.keep_alive=null;
+        this.request_count=0;
+        this.expireTimeout={time: -1, timeout: null};
     }
 
     fetch_headers(headers) {
@@ -39,6 +43,7 @@ class Session {
                 continue;
             }
             if (i.toLowerCase() === 'set-cookie') {
+                this.fetch_expire(headers[i]);
                 request_headers['Cookie']=headers[i];
             } else if (i.toLowerCase() === 'connection') {
                 request_headers[i]='keep-alive';
@@ -54,8 +59,46 @@ class Session {
         return requestHeaders;
     }
 
+    fetch_expire(header) {
+        const ref=this;
+        if (Array.isArray(header)) {
+            header.forEach(h => ref.fetch_expire(h));
+        } else {
+            const expireDateString=header.replace(/^(.*)expires=(.*);(.*)$/gi, '$2');
+            if (expireDateString.length !== 0 && expireDateString !== header) {
+                const expireDate=new Date(expireDateString);
+                console.log('Timeout set to '+expireDate.toString());
+                if (this.expireTimeout.timeout !== null) {
+                    this.expireTimeout.timeout.cancel()
+                }
+                this.expireTimeout.time=expireDate.getTime();
+                // 10 seconds before expire
+                this.expireTimeout.time=(this.expireTimeout.time-new Date().getTime()-10000);
+                this.expireTimeout.timeout=delay(this.expireTimeout.time);
+                this.set_timeout();
+            }
+        }
+    }
+
+    async set_timeout() {
+        if (this.expireTimeout.timeout === null) {
+            console.warn('No timeout, nothing to do');
+            return;
+        }
+        const ref=this;
+        try {
+            console.log('Timeout to expire in '+ref.expireTimeout.time);
+            await ref.expireTimeout.timeout;
+            ref.relogin();
+        } catch(err) {
+            console.error('Error with timeout');
+            console.error(err);
+        }
+    }
+
     do_request(url, method, data, callback) {
-        let ref=this;
+        const ref=this;
+        this.request_count++;
         request({url: url, method: method, headers: ref.headers, form: data, callback: callback});
     }
 
@@ -75,15 +118,26 @@ class Session {
     }
 
     relogin() {
+        console.log('Triggering relogin @ '+new Date().toString());
         let ref=this;
-        return this.get_request(this.domain+'sessions/new', function(error, response, body) {
+        let defer=q.defer();
+        this.get_request(this.domain+'sessions/new', function(error, response, body) {
             if (response.statusCode !== 200) {
                 console.error('Error fetching login form ('+response.statusCode+')');
                 console.error(error);
-                return;
+                defer.reject('Error fetching login form ('+response.statusCode+')\n'+error);
+                return defer.promise;
             }
             ref.headers=ref.fetch_headers(response.headers);
+            console.log('Fetched headers');
+            for (let h in ref.headers) {
+                console.log(h+': '+ref.headers[h]);
+            }   
             let loginDom=new Nimenhuuto(body);
+            if (loginDom.domObject.querySelector("input[type='hidden'][name='authenticity_token']") === null) {
+                defer.reject('WTF, no auth token found...');
+                return defer.promise;
+            }
             let authToken=loginDom.domObject.querySelector("input[type='hidden'][name='authenticity_token']").value;
             let loginForm={
                 authenticity_token: authToken,
@@ -93,8 +147,15 @@ class Session {
                 commit: 'Kirjaudu',
             };
             // Login
-            ref.post_request(ref.domain+'sessions', loginForm, ref.callback);
+            ref.post_request(ref.domain+'sessions', loginForm, function(login_error, login_response, login_body) {
+                ref.callback(login_error, login_response, login_body).then(function(session_response) {
+                    defer.resolve(session_response);
+                }, function(session_error) {
+                    defer.reject(session_error);
+                });
+            });
         });
+        return defer.promise;
     }
 
     init_players_cache() {

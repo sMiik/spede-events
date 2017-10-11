@@ -9,6 +9,9 @@ class Event extends Nimenhuuto {
     constructor(domObject) {
         super(domObject);
 
+        if (this.domObject.querySelector("input[type='hidden'][name='message[event_id]']") === null) {
+            return;
+        }
         this.id=this.domObject.querySelector("input[type='hidden'][name='message[event_id]']").value;
         let dateTimeString=this.domObject.querySelector('.dtstart').getAttribute('datetime');
         this.date=new Date(dateTimeString);

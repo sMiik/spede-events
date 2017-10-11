@@ -5,13 +5,15 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js"
+    "start": "node index.js",
+    "start:log": "npm start 2>&1 | tee output.log"
   },
   "author": "FC Spede ry",
   "license": "ISC",
   "dependencies": {
     "config": "^1.26.2",
     "dateformat": "^2.0.0",
+    "delay": "^2.0.0",
     "express": "^4.15.4",
     "jsdom": "^11.2.0",
     "nodemon": "^1.12.0",

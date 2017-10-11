@@ -1,11 +1,16 @@
 'use strict';
 
 const express=require('express'),
-      dateformat=require('dateformat');
+      dateformat=require('dateformat'),
+      q=require('q');
 
 class Api {
 
     constructor(session, configs) {
+        this.resetApi(session, configs);
+    }
+
+    resetApi(session, configs) {
         this.session=session;
         this.update_intervals=configs.update_intervals;
         this.path=configs.request_path;
@@ -168,7 +173,7 @@ class Api {
             });
         }
         return eventObject;
-    };
+    }
 
     getOldestRequestTime(events) {
         events.sort(function(a, b) {
@@ -179,46 +184,120 @@ class Api {
         return events[0].request_date;
     }
 
+    isInvalidSession() {
+        try {
+            let returnValue=typeof(this.session.players) === 'undefined' ||
+                    this.session.players === null ||
+                    this.session.players.length === 0 ||
+                    typeof(this.session.events) !== typeof([]) ||
+                    this.session.events === null ||
+                    (this.session.events.length > 0 &&
+                    this.session.events.filter(ev => ev.id === null).length > 0);
+            if (returnValue) {
+                console.error('Session broken! attempting to renew..');
+            }
+            return returnValue;
+        } catch(e) {
+            console.error('Failure with session\nHeaders:\n');
+            for (let h in this.session.headers) {
+                console.error(h+': '+this.session_headers[h]);
+            }
+            console.error('Request count: '+this.session.request_count+'\n');
+        }
+    }
+
+    handlePlayersApiResponse(res) {
+        if (this.shouldUpdate('players', this.session.players.request_date)) {
+            console.log('Too old data, fetching players again');
+            this.updateAndReturnPlayers(res);
+        } else {
+            let playersResponse=this.session.players.players.map(pl => pl.get_object());
+            res.send(JSON.stringify(playersResponse));
+        }
+    }
+
+    handlePlayerApiResponse(res, params) {
+        let playerId=params.id;
+        let playerObject=this.getPlayerObject(playerId);
+        if (this.shouldUpdate('players', this.session.players.request_date)) {
+            console.log('Too old data, fetching players again');
+            this.updateAndReturnPlayer(res, playerObject);
+        } else {
+            res.send(JSON.stringify(playerObject));
+        }
+    }
+
+    handleEventsApiResponse(res) {
+        if (this.session.events.length > 0) {
+            let oldest=this.getOldestRequestTime(this.session.events);
+            if (this.shouldUpdate('events', oldest)) {
+                console.log('Too old data, fetching events again');
+                this.updateAndReturnEvents(res);
+            } else {
+                let eventsResponse=this.handleEventsResponse(this.session.events);
+                res.send(JSON.stringify(eventsResponse));
+            }
+        } else {
+            res.send(JSON.stringify(this.session.events));
+        }
+    }
+
+    handleEventApiResponse(res, params) {
+        let eventId=params.id;
+        let eventObject=this.getEventObject(eventId);
+        if (this.shouldUpdate('event', eventObject.request_date)) {
+            console.log('Too old data, fetching event '+eventObject.id+' again');
+            this.updateAndReturnEvent(res, eventObject);
+        } else {
+            eventObject=this.fillEventDetails(eventObject);
+            res.send(JSON.stringify(eventObject));
+        }
+    }
+
     initInterfaces(domain, port) {
         let ref=this;
         this.app.get(ref.path+'players', function(req, res) {
-            if (ref.shouldUpdate('players', ref.session.players.request_date)) {
-                console.log('Too old data, fetching players again');
-                ref.updateAndReturnPlayers(res);
+            if (ref.isInvalidSession()) {
+                ref.session.relogin().then(function() {
+                    ref.handlePlayersApiResponse(res);
+                }, function(error) {
+                    res.send(JSON.stringify({'status':'error','description':error}));
+                });
             } else {
-                let playersResponse=ref.session.players.players.map(pl => pl.get_object());
-                res.send(JSON.stringify(playersResponse));
+                ref.handlePlayersApiResponse(res);
             }
         });
         this.app.get(ref.path+'players/:id', function(req, res) {
-            let playerId=req.params.id;
-            let playerObject=ref.getPlayerObject(playerId);
-            if (ref.shouldUpdate('players', ref.session.players.request_date)) {
-                console.log('Too old data, fetching players again');
-                ref.updateAndReturnPlayer(res, playerObject);
+            if (ref.isInvalidSession()) {
+                ref.session.relogin().then(function() {
+                    ref.handlePlayerApiResponse(res, req.params);
+                }, function(error) {
+                    res.send(JSON.stringify({'status':'error','description':error}));
+                });
             } else {
-                res.send(JSON.stringify(playerObject));
+                ref.handlePlayerApiResponse(res, req.params);
             }
         });
         this.app.get(ref.path+'events', function(req, res) {
-            let oldest=ref.getOldestRequestTime(ref.session.events);
-            if (ref.shouldUpdate('events', oldest)) {
-                console.log('Too old data, fetching events again');
-                ref.updateAndReturnEvents(res);
+            if (ref.isInvalidSession()) {
+                ref.session.relogin().then(function() {
+                    ref.handleEventsApiResponse(res);
+                }, function(error) {
+                    res.send(JSON.stringify({'status':'error','description':error}));
+                });
             } else {
-                let eventsResponse=ref.handleEventsResponse(ref.session.events);
-                res.send(JSON.stringify(eventsResponse));
-            }
+                ref.handleEventsApiResponse(res);
+            } 
         });
         this.app.get(ref.path+'events/:id', function(req, res) {
-            let eventId=req.params.id;
-            let eventObject=ref.getEventObject(eventId);
-            if (ref.shouldUpdate('event', eventObject.request_date)) {
-                console.log('Too old data, fetching event '+eventObject.id+' again');
-                ref.updateAndReturnEvent(res, eventObject);
+            if (ref.isInvalidSession()) {
+                ref.session.relogin().then(function() {
+                    ref.handleEventApiResponse(res, req.params);
+                }, function(error) {
+                    res.send(JSON.stringify({'status':'error','description':error}));
+                });
             } else {
-                eventObject=ref.fillEventDetails(eventObject);
-                res.send(JSON.stringify(eventObject));
+                ref.handleEventApiResponse(res, req.params);
             }
         });
         this.app.listen(port, domain);

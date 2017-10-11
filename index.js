@@ -1,4 +1,6 @@
 const config=require('config'),
+      q=require('q'),
+      dateformat=require('dateformat'),
       // custom classes
       Session=require('./classes/session.class.js'),
       Players=require('./classes/players.class.js'),
@@ -15,21 +17,14 @@ const username=config.get('credentials.username'),
 // Globally used variables
 var session=new Session(domain);
 
-// The whole thing's run by initializing session and starting the handle
-let session_callback=function(error, response, body) {
-    if (response.statusCode !== 200 && 
-            response.statusCode !== 302 &&
-            response.statusCode !== 301) {
-        session.initialized=false;
-        console.error('Error opening session ('+response.statusCode+')');
-        console.error(error);
-        return;
-    }
+const refresh_cache=function() {
+    let defer=q.defer();
     session.init_players_cache().then(function(playersCache) {
         if (playersCache === null || playersCache.players.length === 0) {
             session.initialized=false;
             console.error('Error initializing players cache. Nothing found.');
-            return;
+            defer.reject('Error initializing players cache. Nothing found.');
+            return defer.promise;
         }
         console.log(playersCache.players.length+' players initialized to cache');
         session.fetch_events().then(function(events) {
@@ -59,20 +54,38 @@ let session_callback=function(error, response, body) {
                     nonAnsweredPlayers.push(playerInfo.get_player_info_string());
                 });
                 console.log('? ('+nonAnsweredPlayers.length+'): '+nonAnsweredPlayers.join(', '));
+                defer.resolve('Players initialized to cache and all events fetched');
             });
         }, function(events_error) {
             console.error('Error fetching events!');
             console.error(events_error);
+            defer.reject('Error fetching events!\n'+events_error);
         });
     }, function(players_error) {
         session.initialized=false;
         console.error('Error initializing players cache');
         console.error(players_error);
+        defer.reject('Error initializing players cache\n'+players_error);
     });
+    return defer.promise;
 };
 
-// Aka. init
-session.login(username, password, session_callback);
+// The whole thing's run by initializing session and starting the handle
+const session_callback=function(error, response, body) {
+    let defer=q.defer();
+    if (response.statusCode !== 200 && 
+            response.statusCode !== 302 &&
+            response.statusCode !== 301) {
+        session.initialized=false;
+        console.error('Error opening session ('+response.statusCode+')');
+        console.error(error);
+        defer.reject('Error opening session ('+response.statusCode+')\n'+error);
+        return defer.promise;
+    }
+    return refresh_cache();
+};
 
+const maxTimeout=Math.max.apply(Math, Object.keys(api_config.update_intervals).map(key => api_config.update_intervals[key]));
+session.login(username, password, session_callback);
 const api=new Api(session, api_config);
 
