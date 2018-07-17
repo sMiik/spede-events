@@ -60,15 +60,15 @@ class Event extends Nimenhuuto {
 
     get_object() {
         return {
-            id: this.id,
-            link: this.link,
-            name: this.name,
-            date: dateformat(this.date, 'yyyy-mm-dd')+'T'+dateformat(this.date, 'HH:MM'),
-            type: this.type,
-            inPlayers: [].slice.call(this.inPlayers).map(playerDom => playerDom.id),
-            outPlayers: [].slice.call(this.outPlayers).map(playerDom => playerDom.id),
-            nonAnsweredPlayers: [].slice.call(this.nonAnsweredPlayers).map(playerDom => playerDom.id),
-            request_date: this.request_date
+            "id": this.id,
+            "link": this.link,
+            "name": this.name,
+            "date": dateformat(this.date, 'yyyy-mm-dd')+'T'+dateformat(this.date, 'HH:MM'),
+            "type": this.type,
+            "in": [].slice.call(this.inPlayers).map(playerDom => playerDom.id),
+            "out": [].slice.call(this.outPlayers).map(playerDom => playerDom.id),
+            "?": [].slice.call(this.nonAnsweredPlayers).map(playerDom => playerDom.id),
+            "request_date": this.request_date
         };
     }
 

@@ -122,6 +122,20 @@ class Session {
         let ref=this;
         let defer=q.defer();
         this.get_request(this.domain+'sessions/new', function(error, response, body) {
+            if (error) {
+                console.error('Error gotten!');
+                console.error(error);
+                defer.reject(error);
+                return defer.response;
+            }
+            if (!response.statusCode) {
+                console.error('Something weird happening, no statusCode');
+                console.error(response);
+                console.error(error);
+                console.error(body);
+                defer.reject('No statuscode gotten');
+                return defer.promise;
+            }
             if (response.statusCode !== 200) {
                 console.error('Error fetching login form ('+response.statusCode+')');
                 console.error(error);

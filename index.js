@@ -1,3 +1,5 @@
+#!/usr/bin/npm
+
 const config=require('config'),
       q=require('q'),
       dateformat=require('dateformat'),
@@ -13,9 +15,6 @@ const username=config.get('credentials.username'),
       sub=config.get('team.abbreviation'),
       domain='https://'+sub+'.nimenhuuto.com/',
       api_config=config.get('api');
-
-// Globally used variables
-var session=new Session(domain);
 
 const refresh_cache=function() {
     let defer=q.defer();
@@ -85,7 +84,14 @@ const session_callback=function(error, response, body) {
     return refresh_cache();
 };
 
-const maxTimeout=Math.max.apply(Math, Object.keys(api_config.update_intervals).map(key => api_config.update_intervals[key]));
-session.login(username, password, session_callback);
+// Globally used variables
+const session=new Session(domain);
 const api=new Api(session, api_config);
-
+try {
+    session.login(username, password, session_callback);
+} catch(error) {
+    console.error('Error thrown!');
+    console.error(error);
+    console.logo('Attempting again');
+    session.login(username, password, session_callback);
+}
