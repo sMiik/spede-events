@@ -6,7 +6,6 @@ const config=require('config'),
       // custom classes
       Session=require('./classes/session.class.js'),
       Players=require('./classes/players.class.js'),
-      Event=require('./classes/event.class.js'),
       Api=require('./classes/api.class.js');
 
 // Constants from configurations
@@ -60,6 +59,14 @@ const refresh_cache=function() {
             console.error(events_error);
             defer.reject('Error fetching events!\n'+events_error);
         });
+        // Get archived events in the background
+        session.fetch_events(true).then(function(events) {
+            console.log('Fetched all '+events.length+' archived events');
+            // Sort events by time
+            session.events.sort(function(a, b) {
+                return a.date.getTime() - b.date.getTime();
+            });
+        })
     }, function(players_error) {
         session.initialized=false;
         console.error('Error initializing players cache');

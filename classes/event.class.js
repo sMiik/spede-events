@@ -6,12 +6,13 @@ const dateformat=require('dateformat'),
 
 class Event extends Nimenhuuto {
 
-    constructor(domObject) {
+    constructor(domObject, archiveEvent) {
         super(domObject);
 
         if (this.domObject.querySelector("input[type='hidden'][name='message[event_id]']") === null) {
             return;
         }
+        this.archiveEvent=archiveEvent;
         this.id=this.domObject.querySelector("input[type='hidden'][name='message[event_id]']").value;
         let dateTimeString=this.domObject.querySelector('.dtstart').getAttribute('datetime');
         this.date=new Date(dateTimeString);
@@ -28,9 +29,15 @@ class Event extends Nimenhuuto {
         }
         this.link=this.domObject.querySelector('form#new_enrollment').getAttribute('action').replace(/^(.*?)\/events\/(\d+)\/(.*)$/, '$1/events/$2/');
 
-        this.inPlayers=this.get_players_by_enrollment('in');
-        this.outPlayers=this.get_players_by_enrollment('out');
-        this.nonAnsweredPlayers=this.get_players_by_enrollment('?');
+        this.init_players();
+    }
+
+    init_players() {
+        const ref=this;
+        ref.players={'in':[],'out':[],'?':[]};
+        Object.keys(ref.players).map(function(key, idx) {
+            ref.players[key]=ref.get_players_by_enrollment(key);
+        });
     }
 
     get_players_by_enrollment(joinStatus) {
@@ -53,6 +60,7 @@ class Event extends Nimenhuuto {
 
     get_event_info() {
         let thisDateString=dateformat(this.date, 'dd.mm.yyyy @ HH:MM');
+        if (this.archivedEvent) thisDateString += ' (ARCHIVE)';
         return '---------------------------------------------------\n'
                 +thisDateString+': '+this.name+' ('+this.link+')\n'
                 +'---------------------------------------------------';
@@ -60,15 +68,17 @@ class Event extends Nimenhuuto {
 
     get_object() {
         return {
-            "id": this.id,
-            "link": this.link,
-            "name": this.name,
-            "date": dateformat(this.date, 'yyyy-mm-dd')+'T'+dateformat(this.date, 'HH:MM'),
-            "type": this.type,
-            "in": [].slice.call(this.inPlayers).map(playerDom => playerDom.id),
-            "out": [].slice.call(this.outPlayers).map(playerDom => playerDom.id),
-            "?": [].slice.call(this.nonAnsweredPlayers).map(playerDom => playerDom.id),
-            "request_date": this.request_date
+            'id': this.id,
+            'link': this.link,
+            'name': this.name,
+            'date': dateformat(this.date, 'yyyy-mm-dd')+'T'+dateformat(this.date, 'HH:MM'),
+            'type': this.type,
+            'players':{
+                'in': [].slice.call(this.players['in']).map(playerDom => playerDom.id),
+                'out': [].slice.call(this.players['out']).map(playerDom => playerDom.id),
+                '?': [].slice.call(this.players['?']).map(playerDom => playerDom.id)
+            },
+            'request_date': this.request_date
         };
     }
 

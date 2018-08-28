@@ -145,8 +145,8 @@ class Api {
 
     fillEventDetails(eventObject) {
         let ref=this;
-        if (eventObject.inPlayers !== null && eventObject.inPlayers.length > 0) {
-            eventObject.inPlayers=eventObject.inPlayers.map(pl => {
+        if (!!eventObject.players && !!eventObject.players['in']) {
+            eventObject.players['in']=eventObject.players['in'].map(pl => {
                 let playerObject=ref.session.players.getPlayer(pl);
                 if (playerObject === null) {
                     return pl;
@@ -154,8 +154,8 @@ class Api {
                 return playerObject.get_object();
             });
         }
-        if (eventObject.outPlayers !== null && eventObject.outPlayers.length > 0) {
-            eventObject.outPlayers=eventObject.outPlayers.map(pl => {
+        if (!!eventObject.players && !!eventObject.players['out']) {
+            eventObject.players['out']=eventObject.players['out'].map(pl => {
                 let playerObject=ref.session.players.getPlayer(pl);
                 if (playerObject === null) {
                     return pl;
@@ -163,8 +163,8 @@ class Api {
                 return playerObject.get_object();
             });
         }
-        if (eventObject.nonAnsweredPlayers !== null && eventObject.nonAnsweredPlayers.length > 0) {
-            eventObject.nonAnsweredPlayers=eventObject.nonAnsweredPlayers.map(pl => {
+        if (!!eventObject.players && !!eventObject.players['?']) {
+            eventObject.players['?']=eventObject.players['?'].map(pl => {
                 let playerObject=ref.session.players.getPlayer(pl);
                 if (playerObject === null) {
                     return pl;
@@ -177,6 +177,7 @@ class Api {
 
     getOldestRequestTime(events) {
         events.sort(function(a, b) {
+            if (a.archiveEvent) return 1;
             let aTime=new Date(a.request_date).getTime();
             let bTime=new Date(b.request_date).getTime();
             return aTime - bTime;
@@ -245,7 +246,7 @@ class Api {
     handleEventApiResponse(res, params) {
         let eventId=params.id;
         let eventObject=this.getEventObject(eventId);
-        if (this.shouldUpdate('event', eventObject.request_date)) {
+        if (!eventObject.archiveEvent && this.shouldUpdate('event', eventObject.request_date)) {
             console.log('Too old data, fetching event '+eventObject.id+' again');
             this.updateAndReturnEvent(res, eventObject);
         } else {

@@ -191,25 +191,27 @@ class Session {
         return defer.promise;
     }
 
-    fetch_events() {
-        console.log('Getting all the events (from first page)');
+    fetch_events(archive=false,page=1) {
+        console.log('Getting all the '+(archive?'archived events':'events')+' (from page '+page+')');
         let defer=q.defer();
         let event_promises=[];
-        this.events=[];
         let ref=this;
-        this.get_request(ref.domain+'events', function(events_error, events_response, events_body) {
+        this.get_request(ref.domain+(archive?'events/archive':'events')+'?page='+page, function(events_error, events_response, events_body) {
             if (events_response.statusCode !== 200) {
                 ref.initialized=false;
                 defer.reject('Unable to fetch events ('+events_response+')\n'+error);
             }
             let eventsObject=new Nimenhuuto(events_body);
             let events=eventsObject.domObject.querySelectorAll('.event-detailed-container');
-            console.log(events.length+' events found');
+            let counts=ref.get_event_counts();
+            console.log(events.length+(archive?' archived events ':' events ')
+                    +'found from page '+page
+                    +' ('+counts.active+' active and '+counts.archived+' archived already fetched)');
             // Chain requests to run in order
             let event_chain=q.when();
             for (let e=0; e<events.length; e++) {
                 let event_link=events[e].querySelector('.event-title-link').href;
-                event_promises.push(ref.request_event(event_link).then(function(nhEvent) {
+                event_promises.push(ref.request_event(event_link,archive).then(function(nhEvent) {
                     if (ref.get_event(nhEvent.id) === null) {
                         ref.events.push(nhEvent);
                     } else {
@@ -225,19 +227,26 @@ class Session {
             // Wait for all events
             q.all(event_promises).then(function(all_events) {
                 defer.resolve(all_events);
+                let nextPage=eventsObject.domObject.querySelector('.next.next_page');
+                let nextPageDisabled=eventsObject.domObject.querySelector('.next.next_page.disabled');
+                if (nextPage!=null&&nextPageDisabled==null){
+                    ref.fetch_events(archive,page+1);
+                } else {
+                    console.log('Reached the end of last page for '+(archive?'archived':'active')+' events (page '+page+')');
+                }
             });
         });
         return defer.promise;
     }
 
-    request_event(event_link) {
+    request_event(event_link, archived) {
         let defer=q.defer();
         this.get_request(event_link, function(error, response, body) {
             if (response.statusCode !== 200) {
                 defer.reject('Error fetching event from '+event_link+'\n'
                         +error);
             } else {
-                let nhEvent=new Event(body);
+                let nhEvent=new Event(body, archived);
                 let now=new Date();
                 nhEvent.request_date=dateformat(now, 'yyyy-mm-dd')+'T'+dateformat(now, 'HH:MM:ss');
                 defer.resolve(nhEvent);
@@ -252,6 +261,18 @@ class Session {
             return null;
         }
         return nhEvent[0];
+    }
+
+    get_event_counts() {
+        let counts={active:0,archived:0};
+        for (let i=0;i<this.events.length;i++){
+            if (this.events[i].archiveEvent) {
+                counts.archived++;
+            } else {
+                counts.active++;
+            }
+        }
+        return counts;
     }
 
 };
