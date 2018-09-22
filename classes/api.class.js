@@ -2,7 +2,8 @@
 
 const express=require('express'),
       dateformat=require('dateformat'),
-      q=require('q');
+      q=require('q'),
+      fs=require('fs');
 
 class Api {
 
@@ -82,6 +83,7 @@ class Api {
             }
             console.log(playersCache.players.length+' players initialized to cache');
             let playersResponse=ref.session.players.players.map(pl => pl.get_object());
+            ref.createCache('players', playersResponse);
             res.send(JSON.stringify(playersResponse));
         }, function(error) {
             console.warn('Unable to fetch players');
@@ -100,7 +102,8 @@ class Api {
             }
             console.log(playersCache.players.length+' players initialized to cache');
             let playerResponse=ref.getPlayerObject(playerObj.id);
-            res.send(JSON.stringify(playersResponse));
+            ref.createCache('players/'+playerObj.id, playerResponse);
+            res.send(JSON.stringify(playerResponse));
         }, function(error) {
             console.warn('Unable to fetch players');
             console.warn(error);
@@ -117,6 +120,7 @@ class Api {
                 return a.date.getTime() - b.date.getTime();
             });
             let response=ref.handleEventsResponse(ref.session.events);
+            ref.createCache('events', response);
             res.send(JSON.stringify(response));
         }, function(error) {
             console.warn('Unable to fetch events');
@@ -134,6 +138,7 @@ class Api {
             console.log(eventResponse.request_date+': event '+eventResponse.id+' updated');
             eventObject=eventResponse.get_object();
             eventObject=ref.fillEventDetails(eventObject);
+            this.createCache('events/'+eventObject.id, eventObject);
             res.send(JSON.stringify(eventObject));
         }, function(error) {
             console.warn('Unable to fetch event '+eventObject.id);
@@ -208,51 +213,108 @@ class Api {
     }
 
     handlePlayersApiResponse(res) {
-        if (this.shouldUpdate('players', this.session.players.request_date)) {
-            console.log('Too old data, fetching players again');
-            this.updateAndReturnPlayers(res);
-        } else {
-            let playersResponse=this.session.players.players.map(pl => pl.get_object());
-            res.send(JSON.stringify(playersResponse));
-        }
+        let ref=this;
+        ref.useCache('players', res, function(){
+            if (ref.shouldUpdate('players', ref.session.players.request_date)) {
+                console.log('Too old data, fetching players again');
+                ref.updateAndReturnPlayers(res);
+            } else {
+                let playersResponse=ref.session.players.players.map(pl => pl.get_object());
+                ref.createCache('players', playersResponse);
+                res.send(JSON.stringify(playersResponse));
+            }
+        });
     }
 
     handlePlayerApiResponse(res, params) {
         let playerId=params.id;
         let playerObject=this.getPlayerObject(playerId);
-        if (this.shouldUpdate('players', this.session.players.request_date)) {
-            console.log('Too old data, fetching players again');
-            this.updateAndReturnPlayer(res, playerObject);
-        } else {
-            res.send(JSON.stringify(playerObject));
-        }
+        let ref=this;
+        ref.useCache('players/'+playerId, res, function(){
+            if (ref.shouldUpdate('players', ref.session.players.request_date)) {
+                console.log('Too old data, fetching players again');
+                ref.updateAndReturnPlayer(res, playerObject);
+            } else {
+                ref.createCache('players/'+playerId, playerObject);
+                res.send(JSON.stringify(playerObject));
+            }
+        });
     }
 
     handleEventsApiResponse(res) {
-        if (this.session.events.length > 0) {
-            let oldest=this.getOldestRequestTime(this.session.events);
-            if (this.shouldUpdate('events', oldest)) {
-                console.log('Too old data, fetching events again');
-                this.updateAndReturnEvents(res);
+        let ref=this;
+        ref.useCache('events', res, function(){
+            if (ref.session.events.length > 0) {
+                let oldest=ref.getOldestRequestTime(ref.session.events);
+                if (ref.shouldUpdate('events', oldest)) {
+                    console.log('Too old data, fetching events again');
+                    ref.updateAndReturnEvents(res);
+                } else {
+                    let eventsResponse=ref.handleEventsResponse(ref.session.events);
+                    ref.createCache('events', eventsResponse);
+                    res.send(JSON.stringify(eventsResponse));
+                }
             } else {
-                let eventsResponse=this.handleEventsResponse(this.session.events);
-                res.send(JSON.stringify(eventsResponse));
+                res.send(JSON.stringify(this.session.events));
             }
-        } else {
-            res.send(JSON.stringify(this.session.events));
-        }
+        });
     }
 
     handleEventApiResponse(res, params) {
         let eventId=params.id;
         let eventObject=this.getEventObject(eventId);
-        if (!eventObject.archiveEvent && this.shouldUpdate('event', eventObject.request_date)) {
-            console.log('Too old data, fetching event '+eventObject.id+' again');
-            this.updateAndReturnEvent(res, eventObject);
-        } else {
-            eventObject=this.fillEventDetails(eventObject);
-            res.send(JSON.stringify(eventObject));
+        let ref=this;
+        ref.useCache('events/'+eventId, res, function(){
+            if (!eventObject.archiveEvent && ref.shouldUpdate('event', eventObject.request_date)) {
+                console.log('Too old data, fetching event '+eventObject.id+' again');
+                ref.updateAndReturnEvent(res, eventObject);
+            } else {
+                eventObject=ref.fillEventDetails(eventObject);
+                ref.createCache('events/'+eventId, eventObject);
+                res.send(JSON.stringify(eventObject));
+            }
+        });
+    }
+
+    createCache(path, data) {
+        const cachePath=this.dataCachePath(path);
+        fs.writeFileSync(cachePath, JSON.stringify(data));
+    }
+
+    useCache(path, res, cback) {
+        const cachePath=this.dataCachePath(path);
+        console.log(cachePath);
+        if (!fs.existsSync(cachePath)) {
+            console.log('no cache file found');
+            cback();
+            return;
         }
+        const stats=fs.statSync(cachePath);
+        let cacheType=null;
+        if (path.indexOf('players') >= 0) {
+            cacheType='players';
+        } else if (path.indexOf('events') >= 0 && path.indexOf('/') >= 0) {
+            cacheType='event';
+        } else if (path.indexOf('events') >= 0) {
+            cacheType='events';
+        } else {
+            console.warn('No data type found for '+path+', must refresh');
+        }
+        const cacheDate=dateformat(stats.mtime, 'yyyy-mm-dd')+'T'+dateformat(stats.mtime, 'HH:MM:ss');
+        if (cacheType == null) {
+            cback();
+        } else if (this.shouldUpdate(cacheType, cacheDate)) {
+            console.log('Should update, so lets do it');
+            cback();
+        } else {
+            console.log('Using cache \o/');
+            const output=fs.readFileSync(cachePath);
+            res.send(output);
+        }
+    }
+
+    dataCachePath(path) {
+        return 'data/'+path.replace('/', '_').replace('?','').replace('#','')+'-cache.json';
     }
 
     initInterfaces(domain, port) {

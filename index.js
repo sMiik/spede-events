@@ -60,13 +60,14 @@ const refresh_cache=function() {
             defer.reject('Error fetching events!\n'+events_error);
         });
         // Get archived events in the background
-        session.fetch_events(true).then(function(events) {
+        /*session.fetch_events(true).then(function(events) {
             console.log('Fetched all '+events.length+' archived events');
             // Sort events by time
             session.events.sort(function(a, b) {
                 return a.date.getTime() - b.date.getTime();
             });
-        })
+        });
+        */
     }, function(players_error) {
         session.initialized=false;
         console.error('Error initializing players cache');
