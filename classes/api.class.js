@@ -3,7 +3,8 @@
 const express=require('express'),
       dateformat=require('dateformat'),
       q=require('q'),
-      fs=require('fs');
+      fs=require('fs'),
+      path=require('path');
 
 class Api {
 
@@ -278,6 +279,9 @@ class Api {
 
     createCache(path, data) {
         const cachePath=this.dataCachePath(path);
+        const dir=path.dirname(cachePath);
+        if (!fs.existsSync(dir))
+            fs.mkdirSync(dir);
         fs.writeFileSync(cachePath, JSON.stringify(data));
     }
 
