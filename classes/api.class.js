@@ -266,7 +266,7 @@ class Api {
         let eventObject=this.getEventObject(eventId);
         let ref=this;
         ref.useCache('events/'+eventId, res, function(){
-            if (!eventObject.archiveEvent && ref.shouldUpdate('event', eventObject.request_date)) {
+			if (eventObject == null || ref.shouldUpdate('event', eventObject.request_date)) {
                 console.log('Too old data, fetching event '+eventObject.id+' again');
                 ref.updateAndReturnEvent(res, eventObject);
             } else {
@@ -287,9 +287,8 @@ class Api {
 
     useCache(dirpath, res, cback) {
         const cachePath=this.dataCachePath(dirpath);
-        console.log(cachePath);
         if (!fs.existsSync(cachePath)) {
-            console.log('no cache file found');
+            console.log('no cache file found, saving response to ' + cachePath);
             cback();
             return;
         }
