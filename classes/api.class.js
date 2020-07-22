@@ -3,7 +3,8 @@
 const express=require('express'),
       dateformat=require('dateformat'),
       q=require('q'),
-      fs=require('fs');
+      fs=require('fs'),
+      path=require('path');
 
 class Api {
 
@@ -265,7 +266,7 @@ class Api {
         let eventObject=this.getEventObject(eventId);
         let ref=this;
         ref.useCache('events/'+eventId, res, function(){
-            if (!eventObject.archiveEvent && ref.shouldUpdate('event', eventObject.request_date)) {
+			if (eventObject == null || ref.shouldUpdate('event', eventObject.request_date)) {
                 console.log('Too old data, fetching event '+eventObject.id+' again');
                 ref.updateAndReturnEvent(res, eventObject);
             } else {
@@ -276,29 +277,31 @@ class Api {
         });
     }
 
-    createCache(path, data) {
-        const cachePath=this.dataCachePath(path);
+    createCache(dirpath, data) {
+        const cachePath=this.dataCachePath(dirpath);
+        const dir=path.dirname(cachePath);
+        if (!fs.existsSync(dir))
+            fs.mkdirSync(dir);
         fs.writeFileSync(cachePath, JSON.stringify(data));
     }
 
-    useCache(path, res, cback) {
-        const cachePath=this.dataCachePath(path);
-        console.log(cachePath);
+    useCache(dirpath, res, cback) {
+        const cachePath=this.dataCachePath(dirpath);
         if (!fs.existsSync(cachePath)) {
-            console.log('no cache file found');
+            console.log('no cache file found, saving response to ' + cachePath);
             cback();
             return;
         }
         const stats=fs.statSync(cachePath);
         let cacheType=null;
-        if (path.indexOf('players') >= 0) {
+        if (dirpath.indexOf('players') >= 0) {
             cacheType='players';
-        } else if (path.indexOf('events') >= 0 && path.indexOf('/') >= 0) {
+        } else if (dirpath.indexOf('events') >= 0 && dirpath.indexOf('/') >= 0) {
             cacheType='event';
-        } else if (path.indexOf('events') >= 0) {
+        } else if (dirpath.indexOf('events') >= 0) {
             cacheType='events';
         } else {
-            console.warn('No data type found for '+path+', must refresh');
+            console.warn('No data type found for '+dirpath+', must refresh');
         }
         const cacheDate=dateformat(stats.mtime, 'yyyy-mm-dd')+'T'+dateformat(stats.mtime, 'HH:MM:ss');
         if (cacheType == null) {
