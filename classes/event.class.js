@@ -30,6 +30,7 @@ class Event extends Nimenhuuto {
         this.link=this.domObject.querySelector('form#new_enrollment').getAttribute('action').replace(/^(.*?)\/events\/(\d+)\/(.*)$/, '$1/events/$2/');
 
         this.init_players();
+        this.archiveEvent=false;
     }
 
     init_players() {
