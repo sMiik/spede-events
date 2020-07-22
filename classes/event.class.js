@@ -67,20 +67,42 @@ class Event extends Nimenhuuto {
     }
 
     get_object() {
+		const ref=this;
         return {
-            'id': this.id,
-            'link': this.link,
-            'name': this.name,
-            'date': dateformat(this.date, 'yyyy-mm-dd')+'T'+dateformat(this.date, 'HH:MM'),
-            'type': this.type,
+            'id': ref.id,
+            'link': ref.link,
+            'name': ref.name,
+            'date': dateformat(ref.date, 'yyyy-mm-dd')+'T'+dateformat(ref.date, 'HH:MM'),
+            'type': ref.type,
             'players':{
-                'in': [].slice.call(this.players['in']).map(playerDom => playerDom.id),
-                'out': [].slice.call(this.players['out']).map(playerDom => playerDom.id),
-                '?': [].slice.call(this.players['?']).map(playerDom => playerDom.id)
+                'in': [].slice.call(ref.players['in']).map(playerDom => ref.get_player_details(playerDom)),
+                'out': [].slice.call(ref.players['out']).map(playerDom => ref.get_player_details(playerDom)),
+                '?': [].slice.call(ref.players['?']).map(playerDom => ref.get_player_details(playerDom))
             },
             'request_date': this.request_date
         };
     }
+
+	get_player_details(playerDom) {
+		const playerId=playerDom.id;
+		const playerName=playerDom.textContent.trim();
+		const content=playerDom.getAttribute('data-content').trim();
+		const lines=content.split('\n');
+		var enrolledAt='';
+		for (let i in lines){
+			if (lines[i].indexOf('Ilmoittautunut') < 0) continue;
+			enrolledAt=lines[i].trim().replace(/^<br(\s+)?\/>Ilmoittautunut:(\s+)?(.*)$/, '$3');
+		}
+		if (enrolledAt !== ''){
+			var dateParts=enrolledAt.match(/^(\w{2}) (\d{1,2})\.(\d{1,2})\.(\d{4})? klo (\d{1,2}):(\d{1,2})$/);
+			if (typeof dateParts[4] === 'undefined' || dateParts[4] === null || dateParts[4] === ''){
+				dateParts[4] = new Date().getFullYear();
+			}
+			var date=new Date(dateParts[4], dateParts[2], dateParts[3], dateParts[5], dateParts[6]);
+			enrolledAt=dateformat(date, 'dd.mm.yyyy @ HH:MM');
+		}
+		return { playerId, playerName, enrolledAt };
+	}
 
 };
 
