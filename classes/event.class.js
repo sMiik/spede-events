@@ -100,7 +100,7 @@ class Event extends Nimenhuuto {
 				dateParts[4] = new Date().getFullYear();
 			}
 			var date=new Date(dateParts[4], dateParts[2], dateParts[3], dateParts[5], dateParts[6]);
-			enrolledAt=dateformat(date, 'dd.mm.yyyy @ HH:MM');
+			enrolledAt=dateformat(date, 'isoDateTime').substr(0,19);
 		}
 		return { playerId, playerName, enrolledAt };
 	}
