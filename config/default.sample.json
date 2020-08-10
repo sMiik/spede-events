@@ -19,7 +19,14 @@
             "event": SINGLE_EVENT_UPDATE_INTERVAL_IN_MS,
             "players": PLAYERS_CACHE_UPDATE_INTERVAL_IN_MS
         }
-    }   
-
+    },
+	"google":
+	{
+		"apiKey": "GOOGLE_SHEETS_API_KEY",
+		"scopes": ["GOOGLE_SHEETS_API_SCOPES"],
+		"credentialsPath": "PATH_TO_CREDENTIALS",
+		"tokenPath": "PATH_TO_TOKEN",
+		"spreadsheetId": "GOOGLE_SHEETS_SPREADSHEET_ID"
+	}
 }
 

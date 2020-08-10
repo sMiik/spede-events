@@ -6,14 +6,16 @@ const config=require('config'),
       // custom classes
       Session=require('./classes/session.class.js'),
       Players=require('./classes/players.class.js'),
-      Api=require('./classes/api.class.js');
+      Api=require('./classes/api.class.js'),
+      GoogleSheets=require('./classes/googlesheets.class.js');
 
 // Constants from configurations
 const username=config.get('credentials.username'),
       password=config.get('credentials.password'),
       sub=config.get('team.abbreviation'),
       domain='https://'+sub+'.nimenhuuto.com/',
-      api_config=config.get('api');
+      api_config=config.get('api'),
+      sheets_config=config.get('google');
 
 const refresh_cache=function() {
     let defer=q.defer();
@@ -94,12 +96,14 @@ const session_callback=function(error, response, body) {
 
 // Globally used variables
 const session=new Session(domain);
+const sheets=new GoogleSheets(sheets_config);
 const api=new Api(session, api_config);
 try {
     session.login(username, password, session_callback);
 } catch(error) {
     console.error('Error thrown!');
     console.error(error);
-    console.logo('Attempting again');
+    console.log('Attempting again');
     session.login(username, password, session_callback);
 }
+

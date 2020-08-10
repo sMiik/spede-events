@@ -34,12 +34,13 @@ class Api {
         });
     }
 
-    getPlayerObject(playerId) {
+    getPlayerObject(playerId, details) {
+		let fullDetails=!!details?true:false;
         let playerResponse=this.session.players.getPlayer(playerId);
         if (playerResponse === null) {
             return null;
         }
-        return playerResponse.get_object();
+        return playerResponse.get_object(fullDetails);
     }
 
     getEventObject(eventId) {
@@ -229,7 +230,8 @@ class Api {
 
     handlePlayerApiResponse(res, params) {
         let playerId=params.id;
-        let playerObject=this.getPlayerObject(playerId);
+		let fullDetails=!!params.details;
+        let playerObject=this.getPlayerObject(playerId, fullDetails);
         let ref=this;
         ref.useCache('players/'+playerId, res, function(){
             if (ref.shouldUpdate('players', ref.session.players.request_date)) {
@@ -355,7 +357,7 @@ class Api {
                 ref.handleEventsApiResponse(res);
             } 
         });
-        this.app.get(ref.path+'events/:id', function(req, res) {
+        this.app.get(ref.path+'events/:id/:details?', function(req, res) {
             if (ref.isInvalidSession()) {
                 ref.session.relogin().then(function() {
                     ref.handleEventApiResponse(res, req.params);
