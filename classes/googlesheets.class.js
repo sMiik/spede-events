@@ -85,11 +85,11 @@ class GoogleSheets {
 		const sheets = google.sheets({version: 'v4', auth});
 		sheets.spreadsheets.get({
 			spreadsheetId: spreadsheetId,
-			includeGridData: false,//true,
+			includeGridData: true,
 			ranges: []
 		}, (err, res) => {
-			if (err) return console.log('The API returned an error: ' + err);
-			console.log(JSON.stringify(res.data.sheets));
+			if (err) return console.error('The API returned an error: ' + err);
+			console.log(JSON.stringify(res.data.sheets, null, 2));
 		});
 	}
 }
