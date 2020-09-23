@@ -256,7 +256,7 @@ class Api {
                     res.send(JSON.stringify(eventsResponse));
                 }
             } else {
-                res.send(JSON.stringify(this.session.events));
+                res.send(JSON.stringify(ref.session.events));
             }
         });
     }
