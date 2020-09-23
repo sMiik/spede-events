@@ -153,7 +153,7 @@ class Api {
         let ref=this;
         if (!!eventObject.players && !!eventObject.players['in']) {
             eventObject.players['in']=eventObject.players['in'].map(pl => {
-                let playerObject=ref.session.players.getPlayer(pl);
+                let playerObject=ref.session.players.getPlayer(pl.playerId);
                 if (playerObject === null) {
                     return pl;
                 }
@@ -162,7 +162,7 @@ class Api {
         }
         if (!!eventObject.players && !!eventObject.players['out']) {
             eventObject.players['out']=eventObject.players['out'].map(pl => {
-                let playerObject=ref.session.players.getPlayer(pl);
+                let playerObject=ref.session.players.getPlayer(pl.playerId);
                 if (playerObject === null) {
                     return pl;
                 }
@@ -171,7 +171,7 @@ class Api {
         }
         if (!!eventObject.players && !!eventObject.players['?']) {
             eventObject.players['?']=eventObject.players['?'].map(pl => {
-                let playerObject=ref.session.players.getPlayer(pl);
+                let playerObject=ref.session.players.getPlayer(pl.playerId);
                 if (playerObject === null) {
                     return pl;
                 }
